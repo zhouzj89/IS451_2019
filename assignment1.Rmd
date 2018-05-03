@@ -1,0 +1,82 @@
+---
+title: "Assignment 1 Solution"
+date: "4/20/2018"
+output: pdf_document
+---
+
+### Preperation
+```{r}
+# read data
+wine.df <- read.csv("wine.csv")
+```
+
+#### 1. Plot a histogram for the outcome variable.
+
+```{r}
+hist(wine.df$quality)
+```
+
+```{r}
+##alternate graph using ggplot
+library(ggplot2)
+ggplot(data = wine.df) + 
+  geom_histogram(aes(x = quality),binwidth = 1)
+```
+
+#### 2. Partition the data into 70% Training and 30% Validation with a seed of 555
+```{r}
+set.seed(555)  # set seed for reproducing the partition
+# use nrow to get the total number of observations
+nobs <- nrow(wine.df)
+train.index <- sample(1:nobs, 0.7 * nobs)  
+train.df <- wine.df[train.index, ]
+valid.df <- wine.df[-train.index, ]
+```
+
+
+#### 3. Use the training set to run a multiple linear regression for “quality” vs. all other predictors.
+```{r}
+wine.lm <- lm(quality ~ ., data = train.df)
+```
+
+#### 4.1 Which predictors are statistically significant? 
+
+```{r}
+options(scipen = 999)
+summary(wine.lm)
+```
+
+- As we can see, the following predictors are statistically significant:
+    - volatile.acidity
+    - residual.sugar
+    - density
+    - pH
+    - sulphates
+    - alcohol
+
+#### 4.2 How do you interpret the effect of “density” based on the estimates?
+
+The estimates for density is -121.6990218, which means an increase of 1 unit in density will cause a decrease of -121.6990218 of in the dependent variable, quality.
+
+#### 5. What is the RMSE(or residual standard error) for the training set?
+
+We can use `wine.lm$fitted.values` to retrieve the fitted values of the training set.
+```{r}
+library(forecast)
+accuracy(wine.lm$fitted.values, train.df$quality)
+```
+
+The RMSE is 0.741614.
+
+#### 6.1 Apply the model to the validation set and assess the performance. What is the RMSE for the validation set? 
+```{r}
+wine.lm.pred <- predict(wine.lm, valid.df)
+accuracy(wine.lm.pred, valid.df$quality)
+```
+
+The RMSE is 0.772009 for validation set.
+
+#### 6.2 Do you think there is overfitting problem?
+
+No. If our model does *much better* on the training set than on the validation set, then we’re likely overfitting. But in our model, the RMSE for training and validation set are in similar scale. So it is unlikely that we are overfitting.
+

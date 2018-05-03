@@ -1,0 +1,206 @@
+---
+title: "Spring 2018 IS451B Lab 1"
+author: "TA: Zhijin Zhou"
+date: "4/12/2018"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T)
+```
+
+## Outline:
+ 1. Take-Home practice review: Takyo Software Data
+ 2. In class practice: Predicting TV Sales
+ 
+## Take-Home practice: Takyo Software Data
+
+### Data Description
+Takyo software catalog firm that sells games and educational software. It started out as a software manufacturer and then added third-party titles to its offerings. It recently revised its collection of items in a new catalog, which it mailed out to its customers. The file `Tayko.csv` contains information on 2000 purchase. 
+
+```{r showdataset, echo=FALSE,size= "10"}
+tayko.df <- read.csv("Tayko.csv")
+knitr::kable(head(tayko.df[,c("Freq","last_update_days_ago","Web.order","Gender.male","Address_is_res","US","Spending")]))
+
+```
+
+Based on these data and variables, Takyo wants to devise a model for predicting the spending amount that a purchasing customer will yield.
+{-}
+### Questions 1: Create two scatterplots and explore the relationship between
+* `Spending` vs. `Freq`
+* `Spending` vs. `last_update_days_ago`
+
+####Read and select data
+```{r}
+#read data
+tayko.df <- read.csv("Tayko.csv")
+```
+
+####Drawing scatter plots
+```{r}
+#load packages
+library(ggplot2)
+# make scatter plots
+ggplot(data = tayko.df) +
+  geom_point(aes(x = Spending, y = Freq))
+```
+
+
+```{r}
+ggplot(data = tayko.df) +
+  geom_point(aes(x = Spending, y = last_update_days_ago))
+```
+
+Does there seem to be a linear relationship?
+
+{-}
+###Question 2. Fit a multiple linear regression for Spending {-}
+
+#### Step 1: Partition the 2000 records into `70%` training vs. `30%` validationwith the seed set to 1.
+
+To create a train and validation set, we are going to split randomly this data set into 70% training set and 30% validation set.
+
+We point out the observations we want to include in the training set by randomly sample 1400 (i.e., $70\%  \times$ 2000) indexes out of 2000 observations.
+
+```{r}
+set.seed(1)  # set seed for reproducing the partition
+# Random sample indexes
+train.index <- sample(c(1:2000), 2000*0.7)  
+```
+
+Then we select the variables that we would like to include in our model. This is done by specifying the column indexing number.
+
+```{r}
+# select variables for regression
+selected.var <- c(2, 18, 20, 21, 22,23,25)
+
+```
+
+Finally, we can build the training and validation set.
+```{r}
+# Build training and validation set by indexing
+train.df <- tayko.df[train.index, selected.var]
+valid.df <- tayko.df[-train.index, selected.var]
+
+```
+
+#### Step 2: Multiple linear regression
+Linear model is the most popular model for making predictions.
+
+We are trying to find the parameters $\beta$s which can best describe a continuous response variable $Y$ as a function of one or more predictor variables $X$.
+
+Basic formula:
+\begin{equation}
+Y = \beta_0 + \beta_1x_1 +\beta_2x_2 + \beta_2x_2 + \dots + \beta_px_p + \epsilon
+\end{equation}
+
+Run a multiple linear regression for `Spending` vs. `all six predictors` using `lm` function.
+
+```{r}
+# use lm() to run a linear regression of Spending on all 6 predictors in the training set
+tayko.lm <- lm(Spending~., data = train.df)
+```
+
+Display the results
+```{r}
+#  use options() to ensure numbers are not displayed in scientific notation.
+options(scipen = 999)
+summary(tayko.lm)
+```
+Intepret the coefficients: the "Estimates" column gives us the value for the $\beta$s in our model!
+
+#### Step 3: Evaluate the predictive accuracy of the model by examining its performance on the validation set.
+* We need to use library `forecast`.
+* Use `predict` function to make predictions on a new set
+* Use `accuracy` to compute common accuracy measures.
+
+Load library
+```{r,message=FALSE, warning=FALSE}
+library(forecast)
+
+```
+
+make predictions
+```{r}
+# use predict() to make predictions on a new set. 
+tayko.lm.pred <- predict(tayko.lm, valid.df)
+
+```
+
+Recall different accuracy measures:
+$$ME: = {1 \over n}\sum\limits_{i = 1}^n {({Y_i} - {{\hat Y}_i}) = } {1 \over n}\sum\limits_{i = 1}^n {{e_i}} $$
+$$MAE: = {1 \over n}\sum\limits_{i = 1}^n {|{e_i}} |$$
+
+
+$$MPE := 100 \times {1 \over n}\sum\limits_{i = 1}^n {{e_i}/{y_i}} $$
+$$MAPE := 100 \times \frac{1}{n}\sum\limits_{i = 1}^n {|{e_i}/{y_i}|} $$
+$$RMSE: = \sqrt {{1 \over n}\sum\limits_{i = 1}^n {e_i^2} } $$
+calculate the prediction accuracy using `accuracy` function.
+
+```{r}
+#  use options() to ensure numbers are not displayed in scientific notation.
+options(scipen=999, digits = 3)
+
+# use accuracy() to compute common accuracy measures.
+accuracy(tayko.lm.pred, valid.df$Spending)
+```
+
+Why MPE and MAPE measures are not avaiable?
+
+Recall how we calculate MPE and MAPE, acutual value $y_i$ cannot be zero!
+
+#### Step 4: Create a histogram of the residuals in validation set.
+```{r}
+#  use options() to ensure numbers are not displayed in scientific notation.
+options(scipen=999, digits = 0)
+
+# get the residuals
+all.residuals <- valid.df$Spending - tayko.lm.pred
+hist(all.residuals, breaks = 25, xlab = "Residuals")
+
+```
+
+we can also use ggplot to make it fancier. note that ggplot only works with `dataframe`, so we need to first convert `all.residuals` from numeric to dataframe.
+```{r}
+# ggplot only convert data into dataframe
+all.residuals <- as.data.frame(all.residuals)
+# alternate plot using ggplot
+ggplot(data = all.residuals) + geom_histogram(aes(x=all.residuals), binwidth = 25) 
+```
+
+
+## In class practice: Predicting TV Sales
+
+
+###Data Description
+This practice leverages a simple data set that contains, in thousands of dollars, `TV`, `Radio`, and `Newspaper` advertising budgets for 200 different markets along with the Sales, in thousands of units, for each market. We will try to use the advertising budgets for each market to predict the sales.
+
+Import the data from `Advertising.csv`.
+
+### Question1. Creating three scatter plots and explore the relationship between:
+
+* `TV` and `sales` 
+* `radio` and `sales` 
+* `newspaper` and `sales`
+  
+
+### Question 2
+* Partition the data into 80% training vs. 20% validation with the seed set to 123
+* Build and estimate a multiple linear regression using `TV`, `Radio`, and `Newspaper` to predict `Sales`.
+* Examine and interpret the coefficients. What do you find?
+
+
+### Question 3
+* Evaluate the predictive accuracy on the `training set`
+* Evaluate the predictive accuracy on the `validation set`
+* Compare the results with the predictive accuracy on training set and validation set. Which one seems more accurate? Can you give an explanation?
+
+
+### Question 4
+* Create a boxplot of the residuals in validation set
+
+

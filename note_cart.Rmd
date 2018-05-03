@@ -1,0 +1,166 @@
+---
+title: "IS 451: Note on Classification and Regression Trees"
+author: "TA: Zhijin Zhou"
+date: "4/20/2018"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+## Dataset: Universal Bank
+
+The file UniversalBank.cvs contains data on 5000 customers of Universal Bank. Thedata include customer demographic information (age, income, etc.), the customer’srelationship with the bank (mortgage, securities account, etc.).Among these 5000 customers, only 480 (= 9.6%) accepted the personal loan that was offered to them (Persoanl.Loan = 1). 
+
+In this exercise we want to predict whether or not the consumer accepted the personal loan based on the given information of that customer. 
+
+### Step 1: read the data
+
+The first step is to load up and view the data. 
+
+```{r}
+# read and view data
+bank.df <- read.csv("UniversalBank.csv")
+```
+
+We can exclude some variables that cannot be used as predictors: ID and zip code.
+```{r}
+bank.df <- bank.df[ , -c(1, 5)]  # Drop ID and zip code columns.
+```
+
+
+### Step 2: Partition data
+
+Before builing up the model, we always need to partition our data into training and validation set. To do this, we need to randomly select 60% out of all the observations to be included in to the training set and 40% into the validation set.
+
+We can call function `nrow` to get the total number of observations in our data. 
+```{r}
+nrow(bank.df)
+```
+
+Then we sample 60% of all the observations into training set.
+
+```{r}
+# Partition
+set.seed(1)  
+train.index <- sample(1:nrow(bank.df), nrow(bank.df)*0.6)  
+train.df <- bank.df[train.index, ]
+valid.df <- bank.df[-train.index, ]
+```
+
+
+
+### Step 3: Normalizing data
+
+We need to normalize the data before we proceed. Why do we need to do this?
+
+The k-nearest neighbor algorithm relies on majority voting based on class membership of 'k' nearest samples for a given test point. The nearness of samples is typically based on Euclidean distance.
+
+Suppose you had a dataset, and all but one feature dimension had values strictly between (0,1), while a single feature dimension had values that range between (-1000000,1000000). When taking the euclidean distance between pairs of "examples", the values of the feature dimensions that range between 0 and 1 may become *uninformative* and the algorithm would essentially rely on the single dimension whose values are substantially larger, leading to incorrect classification.(!)
+
+Therefore, to avoid this miss classification, the second step we need to do is to *normalize* the feature variables, which makes sure that they fall under common range. 
+
+To do this, we first need to make copies of the original dataset. We will do the normalization on the copies. 
+
+```{r}
+# initialize normalized training, validation data, complete data frames by making copies of the original dataset
+train.norm.df <- train.df
+valid.norm.df <- valid.df
+mower.norm.df <- mower.df
+```
+
+
+Recall that to nomralize a certain feature $X$ (a column in the data frame), we need to substract each value $x$ by its mean $\bar X$ and divided by its standard deviation $sd(X)$:
+$$
+x.norm = {{x - \bar X} \over {sd(X)}}
+$$
+Thus, we need to first calculate the pre-process parameters from the dataset, which are the means and standard deviations for each variables.
+
+We can use `preProcess` function to calculate the pre-process parameters.
+
+```{r, results="hide",warning=F,message= F}
+# calculate the pre-process parameters from the dataset
+library(caret)
+norm.values <- preProcess(train.df[, 1:2], method=c("center", "scale"))
+```
+
+And then we can perform transformations on the copies.
+```{r}
+# transform all the datasets using the parameters
+train.norm.df[, 1:2] <- predict(norm.values, train.df[, 1:2])
+valid.norm.df[, 1:2] <- predict(norm.values, valid.df[, 1:2])
+mower.norm.df[, 1:2] <- predict(norm.values, mower.df[, 1:2])
+```
+
+### Step 3: KNN classification
+
+Now we are ready to do the KNN classification. We can easily build our classfier by calling function `knn` in pacakge `FNN`. This function takes 3 arguments: the training dataset, the validation dataset, the factor of true classifications of training set, and the value of $k$. 
+
+Let's first use k values as 5 to perform kNN analysis.
+
+```{r, results="hide"}
+#install.packages("FNN")
+library(FNN)
+knn.pred <- knn(train.norm.df[, 1:2], valid.norm.df[, 1:2], 
+                  cl = train.norm.df[, 3], k = 5)
+```
+
+Calculate the accuracy using confusion matrix.
+
+```{r}
+confusionMatrix(knn.pred, valid.norm.df[, 3])$overall[1]
+```
+
+Now let's find out the best $k$ which has the best prediction accuracy. First we need to intialze a accuracy data frame.
+
+```{r}
+accuracy.df <- data.frame(k = 1:10, accuracy = rep(0, 10))
+print(accuracy.df)
+```
+
+Then we perform kNN analysis for each k, for $k = 1, \dots, 10$ using a loop.
+
+```{r}
+# compute knn for different k on validation.
+for(i in 1:10) {
+  # use ?knn to find out more information
+  # It worth noting that the input argument cl must be a factor!
+  knn.pred <- knn(train.norm.df[, 1:2], valid.norm.df[, 1:2], 
+                  cl = train.norm.df[, 3], k = i)
+  confusionMatrix(knn.pred, valid.norm.df[, 3])
+  accuracy.df[i, 2] <- confusionMatrix(knn.pred, valid.norm.df[, 3])$overall[1] 
+}
+accuracy.df
+
+```
+
+The best k is the one with the highest accuracy (!).
+
+### Prediction: using the best knn classifier to predict ownership of a new record
+
+Suppose we have a new record with Income = 60 and Lot_Size = 20. Let's predict the ownership using our *best* classifier.
+
+```{r}
+new.df <- data.frame(Income = 60, Lot_Size = 20)
+```
+
+We also need to transform the new record!
+
+```{r}
+new.norm.df <- predict(norm.values, new.df)
+```
+
+Make prediction. 
+```{r}
+knn.pred.new <- knn(train.norm.df[, 1:2], new.norm.df, 
+                    cl = train.norm.df[, 3], k = 4)
+```
+Why do we set k = 4 in the above classifier?
+
+Print out the predicted value. What is our prediction?
+
+```{r}
+print(knn.pred.new)
+```
+
+
+
