@@ -1,0 +1,258 @@
+---
+title: "IS 451 A Lab 2"
+author: "TA: Jamie Park"
+date: "5/8/2018"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T)
+```
+
+##Logistic Regression
+
+Logistic regression is a method for fitting a regression curve, $y = f(x)$, when $y$ is a `binary` variable. The typical use of this model is predicting `y` given a set of predictors `x`. The predictors can be continuous, categorical or a mix of both.
+
+### How does Logistic Regression work?
+
+#### Step 1: Calculate Probability
+
+For Linear Regression, where the output is a linear combination of input feature(s), we write the equation as:
+$$
+\begin{equation}
+Y = \beta_0 + \beta_1x_1 +\beta_2x_2 + \beta_2x_2 + \dots + \beta_px_p + \epsilon
+\end{equation}
+$$
+In Logistic Regression, we use the same equation but with some modifications made to Y. Let's reiterate a fact about Logistic Regression: we calculate `probabilities`. And, probabilities always lie between 0 and 1. In other words, we can say:
+
+  * The Y must be positive (greater than 0).
+  * It should be lower than 1.
+
+First, we'll meet the above two criteria. We know the exponential of any value is always a positive number. And, any number divided by number + 1 will always be lower than 1. Let's implement these two findings:
+
+$$
+p={1 \over {1 + {e^{\beta_0 + \beta_1x_1 +\beta_2x_2 + \beta_2x_2 + \dots + \beta_px_p + \epsilon}}}}
+$$
+We can write the function in a genral form. We call it losgixtic response functin
+$$
+f(z) = {1 \over {1 + e^{-z}}}
+$$
+
+#### Step 2: Classify each example using by comparing the predicted probability to a cutoff probability
+
+  * If $\hat p \le p_{cutoff}$, then $y=0$
+  * If $\hat p > p_{cutoff}$, then $y=1$
+
+
+## Outline:
+ 1. Practice Example 1: Flight delay example
+ 2. Practice Example 2: Acceptance of Personal Loan
+ 
+## Practice Example 1: Flight delay example
+Predicting flight delays can be useful to a variety of organizations: airport authorities, airlines, aviation authorities. At times, joint task forces have been formed to address the problem. Such an organization, if it were to provide onging real-time assistance with flight delays, would benefit from some advance notice about flights likely to be delayed. 
+
+
+### Data Description
+We look at six predictors. The outcome of interest is whether the flight is delayed or not. Our data consist of all flights from the Washington, DC area into the New York City area during January 2004. The percent of delayed flights among these 2201 flights is 19.5%
+
+```{r showdataset, echo=FALSE,size= "10"}
+delays.df <- read.csv("FlightDelays.csv")
+knitr::kable(head(delays.df[,c("DAY_WEEK","CRS_DEP_TIME","ORIGIN","DEST","CARRIER","Weather","Flight.Status")]))
+
+```
+
+The goal is to predict accurately whether a new flight, not in this dataset, will be delayed or not. The outcome variable is a variable called Flight Status. codded as delayed or ontime. 
+
+### Step 1: Preprocess the data
+
+#### Read data
+```{r}
+# read data
+delays.df <- read.csv("FlightDelays.csv")
+```
+
+#### Transform variables and create bins
+Can we use `DAY_WEEK` directly? Let's examine the class of this variable.
+
+```{r}
+class(delays.df$DAY_WEEK)
+```
+
+We cannot use it directly because the class of `DAY_WEEK` is integer. Why? (Hint: Consider how we interpret the coefficients)
+
+* `DAY_WEEK` is coded as 1 = Monday, 2 = Tuesday, ... , 7 = Sunday. We want to transform day of week into a categorical variable.
+* `CRS_DEP_TIME` is coded as a 4-digit number. (e.g. 1432 = 2:32 PM). We want to bin and categorize the departure time into hourly intervals between 6 AM and 10 PM.
+```{r}
+# transform variables and create bins
+delays.df$DAY_WEEK <- factor(delays.df$DAY_WEEK, levels = c(1:7), 
+                             labels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+delays.df$CRS_DEP_TIME <- factor(round(delays.df$CRS_DEP_TIME/100))
+```
+
+#### Transform categorical variables
+Categorical variables must be transformed into binary dummy variables. We need (n-1) dummies for a categorical variable with n levels. So we set reference categories for categorical variables. 
+
+```{r}
+# create reference categories
+delays.df$ORIGIN <- relevel(delays.df$ORIGIN, ref = "IAD")
+delays.df$DEST <- relevel(delays.df$DEST, ref = "LGA")
+delays.df$CARRIER <- relevel(delays.df$CARRIER, ref = "US")
+delays.df$DAY_WEEK <- relevel(delays.df$DAY_WEEK, ref = "Mon")
+delays.df$isDelay <- as.numeric(delays.df$Flight.Status == "delayed")
+```
+
+### Step 2: Partition Data
+Now we are ready to generate train and validation set. `selected.var` contains the column numbers of six predictors we use.
+
+```{r}
+# create training and validation sets
+set.seed(5)
+selected.var <- c(10, 1, 8, 4, 2, 9, 14)
+train.index <- sample(1:nrow(delays.df), nrow(delays.df)*0.6)  
+train.df <- delays.df[train.index, selected.var]
+valid.df <- delays.df[-train.index, selected.var]
+```
+
+### Step 3: Predict Probability
+```{r}
+# run logistic model, and show coefficients 
+logit.reg <- glm(isDelay ~ ., data = train.df, family = "binomial")
+summary(logit.reg)
+```
+
+How do you interpret the result? 
+
+
+$$
+log(Odds) = log({p \over {1-p}}) =\beta_0 + \beta_1x_1 +\beta_2x_2 + \beta_2x_2 + \dots + \beta_px_p + \epsilon
+$$
+
+  * For dummy variable `DAY_WEEKWed`, compared to Monday (base level), neagative coefficient -0.569128 means that it is less likely for flight on Wednesday to delay.
+  * Can you interpret other results? 
+  
+Step 4: Generate outcome by comparing predicted probability with cutoff probability
+
+First calculate the predicted probability on validation set
+```{r,message=FALSE, warning=FALSE}
+# set the cutoff to be 0.5 and evaluate the model
+## use predict() with type = "response" to compute predicted probabilities
+logit.reg.pred <- predict(logit.reg, valid.df, type = "response")
+```
+
+#### Base case: cutoff = 0.5
+
+  * If $\hat p \le 0.5$, then $y=0$
+  * If $\hat p > 0.5$, then $y=1$
+
+```{r}
+# Choose cutoff value and evaluate classification performance
+pred <- ifelse(logit.reg.pred > 0.5, 1, 0)
+
+```
+
+Calculate the prediction accuracy using confusion matrix.
+```{r, warning= FALSE, message= FALSE}
+## generate the confusion matrix based on the prediction
+library(caret)
+confusionMatrix(factor(pred), factor(valid.df$isDelay))$table
+confusionMatrix(factor(pred), factor(valid.df$isDelay))$overall[1]
+```
+Question: Why do we use `factor(train.df$isDelay)` instead of `train.df$isDelay$ here?
+
+Hint: use `class` to examine the type of the data.
+
+```{r}
+class(train.df$isDelay)
+```
+
+Let us see the predictive power of this algorithm by comparing the first 5 actual and predicted records.
+```{r}
+## first 5 actual and predicted records
+data.frame(actual = valid.df$isDelay[1:5], predicted = pred[1:5])
+```
+
+The accuracy in the training data set is
+
+```{r}
+# find out training accuracy
+train.pred <- ifelse(logit.reg$fitted.values > 0.5, 1, 0)
+confusionMatrix(factor(train.pred), factor(train.df$isDelay))$table
+confusionMatrix(factor(train.pred), factor(train.df$isDelay))$overall[1]
+```
+
+
+#### Change the cutoff value to 0.2
+```{r}
+# set the cutoff to be 0.2 and evaluate the model
+pred <- ifelse(logit.reg.pred > 0.2, 1, 0)
+confusionMatrix(factor(pred), factor(valid.df$isDelay))
+```
+
+The accuracy in the training dataset
+```{r}
+# find out training accuracy
+train.pred <- ifelse(logit.reg$fitted.values > 0.2, 1, 0)
+confusionMatrix(factor(train.pred), factor(train.df$isDelay))$overall[1]
+```
+
+Which one is more accurate?
+
+
+## Practice Example 2: Acceptance of Personal Loan (The example in Sesscion 12)
+Universal Bank is a relatively young bank that is growing rapidly in terms of overall customer acquisition. The bank wants to explore ways of converting its liability (deposit) customers to personal loan customers.
+
+### Data Description
+The bank's dataset includes data on 5000 customers. The data include customer demographic information (age, income, etc), customer response to the last personal loan campaign (Personal Loan), and the customer's relationship with the bank (mortgage, securities account, etc.). Among these 5000 customers only 480 (= 9.6%) accepted the personal loan that was offered to them in the earlier campaign.
+
+```{r, echo=FALSE,size= "10"}
+bank.df <- read.csv("UniversalBank.csv")
+knitr::kable(head(bank.df[ , -c(1, 5)]))
+```
+
+### Questions
+1. Import the data from `UniversalBank.csv` and drop ID and zip code columns.
+```{r}
+bank.df <- read.csv("UniversalBank.csv")
+bank.df <- bank.df[ , -c(1, 5)]  # Drop ID and zip code columns.
+```
+
+2. Preprocess Education, which is a categorical variable 
+```{r}
+# treat Education as categorical (R will create dummy variables)
+bank.df$Education <- factor(bank.df$Education, levels = c(1, 2, 3), 
+                            labels = c("Undergrad", "Graduate", "Advanced/Professional"))
+```
+
+3. Partition the data into 60% training vs. 40% validation with the seed set to 2
+```{r}
+# partition data
+set.seed(2)
+train.index <- sample(1:nrow(bank.df), nrow(bank.df)*0.6)  
+train.df <- bank.df[train.index, ]
+valid.df <- bank.df[-train.index, ]
+```
+
+4. Run logistic regression. (use glm() (general linear model) with family = "binomial" to fit a logistic regression. 
+```{r}
+# run logistic regression
+logit.reg <- glm(Personal.Loan ~ ., data = train.df, family = "binomial") 
+options(scipen=999)
+summary(logit.reg)
+```
+
+5. Set the cutoff to be 0.5 and evaluate on validation set. (i.e. generate the confusion matrix)
+
+```{r, message=FALSE, warning=FALSE}
+logit.reg.pred <- predict(logit.reg, valid.df, type = "response")
+
+# set cutoff value to 0.5 and evaluate classification performance
+pred <- ifelse(logit.reg.pred > 0.5, 1, 0)
+
+library(caret)
+confusionMatrix(factor(pred), factor(valid.df[,8]))
+
+```
+
