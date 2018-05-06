@@ -10,7 +10,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<meta name="author" content="TA: Jamie Park" />
+<meta name="author" content="TA: Zhijin Zhou" />
 
 
 <title>IS 451 A Lab 2</title>
@@ -69,25 +69,13 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <section class="page-header">
 <h1 class="title toc-ignore project-name">IS 451 A Lab 2</h1>
-<h4 class="author project-author">TA: Jamie Park</h4>
+<h4 class="author project-author">TA: Zhijin Zhou</h4>
 <h4 class="date project-date">5/8/2018</h4>
 </section>
 
 
 
 <section class="main-content">
-<style type="text/css">
-
-body, td {
-   font-size: 14px;
-}
-code.r{
-  font-size: 14px;
-}
-pre {
-  font-size: 14px
-}
-</style>
 <div id="logistic-regression" class="section level2">
 <h2>Logistic Regression</h2>
 <p>Logistic regression is a method for fitting a regression curve, <span class="math inline">\(y = f(x)\)</span>, when <span class="math inline">\(y\)</span> is a <code>binary</code> variable. The typical use of this model is predicting <code>y</code> given a set of predictors <code>x</code>. The predictors can be continuous, categorical or a mix of both.</p>
@@ -123,12 +111,12 @@ f(z) = {1 \over {1 + e^{-z}}}
 <div id="outline" class="section level2">
 <h2>Outline:</h2>
 <ol style="list-style-type: decimal">
-<li>In class practice: Flight delay example</li>
-<li>Take-home practice: University bank example</li>
+<li>Practice Example 1: Flight delay example</li>
+<li>Practice Example 2: Acceptance of Personal Loan</li>
 </ol>
 </div>
-<div id="in-class-practice-flight-delay-example" class="section level2">
-<h2>In class practice: Flight delay example</h2>
+<div id="practice-example-1-flight-delay-example" class="section level2">
+<h2>Practice Example 1: Flight delay example</h2>
 <p>Predicting flight delays can be useful to a variety of organizations: airport authorities, airlines, aviation authorities. At times, joint task forces have been formed to address the problem. Such an organization, if it were to provide onging real-time assistance with flight delays, would benefit from some advance notice about flights likely to be delayed.</p>
 <div id="data-description" class="section level3">
 <h3>Data Description</h3>
@@ -233,8 +221,8 @@ delays.df<span class="op">$</span>CRS_DEP_TIME &lt;-<span class="st"> </span><sp
 delays.df<span class="op">$</span>ORIGIN &lt;-<span class="st"> </span><span class="kw">relevel</span>(delays.df<span class="op">$</span>ORIGIN, <span class="dt">ref =</span> <span class="st">&quot;IAD&quot;</span>)
 delays.df<span class="op">$</span>DEST &lt;-<span class="st"> </span><span class="kw">relevel</span>(delays.df<span class="op">$</span>DEST, <span class="dt">ref =</span> <span class="st">&quot;LGA&quot;</span>)
 delays.df<span class="op">$</span>CARRIER &lt;-<span class="st"> </span><span class="kw">relevel</span>(delays.df<span class="op">$</span>CARRIER, <span class="dt">ref =</span> <span class="st">&quot;US&quot;</span>)
-delays.df<span class="op">$</span>DAY_WEEK &lt;-<span class="st"> </span><span class="kw">relevel</span>(delays.df<span class="op">$</span>DAY_WEEK, <span class="dt">ref =</span> <span class="st">&quot;Wed&quot;</span>)
-delays.df<span class="op">$</span>isDelay &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">*</span><span class="st"> </span>(delays.df<span class="op">$</span>Flight.Status <span class="op">==</span><span class="st"> &quot;delayed&quot;</span>)</code></pre></div>
+delays.df<span class="op">$</span>DAY_WEEK &lt;-<span class="st"> </span><span class="kw">relevel</span>(delays.df<span class="op">$</span>DAY_WEEK, <span class="dt">ref =</span> <span class="st">&quot;Mon&quot;</span>)
+delays.df<span class="op">$</span>isDelay &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(delays.df<span class="op">$</span>Flight.Status <span class="op">==</span><span class="st"> &quot;delayed&quot;</span>)</code></pre></div>
 </div>
 </div>
 <div id="step-2-partition-data" class="section level3">
@@ -262,40 +250,40 @@ logit.reg &lt;-<span class="st"> </span><span class="kw">glm</span>(isDelay <spa
 ## 
 ## Coefficients:
 ##                  Estimate Std. Error z value Pr(&gt;|z|)    
-## (Intercept)     -2.969225   0.643860  -4.612 4.00e-06 ***
-## DAY_WEEKMon      0.569128   0.285012   1.997  0.04584 *  
-## DAY_WEEKTue      0.335713   0.293618   1.143  0.25289    
-## DAY_WEEKThu     -0.404814   0.313558  -1.291  0.19669    
-## DAY_WEEKFri      0.292096   0.272974   1.070  0.28460    
-## DAY_WEEKSat     -0.383578   0.339407  -1.130  0.25842    
-## DAY_WEEKSun      0.596782   0.297075   2.009  0.04455 *  
-## CRS_DEP_TIME7    0.077350   0.538987   0.144  0.88589    
-## CRS_DEP_TIME8    0.284905   0.489971   0.581  0.56092    
-## CRS_DEP_TIME9    0.148110   0.582884   0.254  0.79942    
-## CRS_DEP_TIME10  -0.318597   0.623420  -0.511  0.60932    
-## CRS_DEP_TIME11   0.397407   0.672694   0.591  0.55467    
-## CRS_DEP_TIME12   0.555447   0.473045   1.174  0.24032    
-## CRS_DEP_TIME13  -0.082900   0.556573  -0.149  0.88160    
-## CRS_DEP_TIME14   0.354448   0.510624   0.694  0.48759    
-## CRS_DEP_TIME15   1.180838   0.429111   2.752  0.00593 ** 
-## CRS_DEP_TIME16   0.370220   0.474842   0.780  0.43559    
-## CRS_DEP_TIME17   0.772120   0.427878   1.805  0.07115 .  
-## CRS_DEP_TIME18   0.113606   0.663347   0.171  0.86402    
-## CRS_DEP_TIME19   1.481971   0.480654   3.083  0.00205 ** 
-## CRS_DEP_TIME20   1.605817   0.598495   2.683  0.00729 ** 
-## CRS_DEP_TIME21   0.722155   0.470736   1.534  0.12501    
-## ORIGINBWI        0.380895   0.411695   0.925  0.35487    
-## ORIGINDCA       -0.446048   0.391194  -1.140  0.25419    
-## DESTEWR         -0.003815   0.333735  -0.011  0.99088    
-## DESTJFK         -0.332552   0.269675  -1.233  0.21752    
-## CARRIERCO        1.320369   0.568219   2.324  0.02014 *  
-## CARRIERDH        1.301212   0.528114   2.464  0.01374 *  
-## CARRIERDL        0.369512   0.352554   1.048  0.29459    
+## (Intercept)     -2.400097   0.639778  -3.751 0.000176 ***
+## DAY_WEEKTue     -0.233415   0.279888  -0.834 0.404303    
+## DAY_WEEKWed     -0.569128   0.285012  -1.997 0.045841 *  
+## DAY_WEEKThu     -0.973942   0.301038  -3.235 0.001215 ** 
+## DAY_WEEKFri     -0.277031   0.258771  -1.071 0.284364    
+## DAY_WEEKSat     -0.952705   0.328767  -2.898 0.003758 ** 
+## DAY_WEEKSun      0.027654   0.285221   0.097 0.922761    
+## CRS_DEP_TIME7    0.077350   0.538987   0.144 0.885888    
+## CRS_DEP_TIME8    0.284905   0.489971   0.581 0.560921    
+## CRS_DEP_TIME9    0.148110   0.582884   0.254 0.799420    
+## CRS_DEP_TIME10  -0.318597   0.623420  -0.511 0.609317    
+## CRS_DEP_TIME11   0.397407   0.672694   0.591 0.554675    
+## CRS_DEP_TIME12   0.555447   0.473045   1.174 0.240317    
+## CRS_DEP_TIME13  -0.082900   0.556573  -0.149 0.881595    
+## CRS_DEP_TIME14   0.354448   0.510624   0.694 0.487590    
+## CRS_DEP_TIME15   1.180838   0.429111   2.752 0.005926 ** 
+## CRS_DEP_TIME16   0.370220   0.474842   0.780 0.435585    
+## CRS_DEP_TIME17   0.772120   0.427878   1.805 0.071148 .  
+## CRS_DEP_TIME18   0.113606   0.663347   0.171 0.864018    
+## CRS_DEP_TIME19   1.481971   0.480654   3.083 0.002048 ** 
+## CRS_DEP_TIME20   1.605817   0.598495   2.683 0.007295 ** 
+## CRS_DEP_TIME21   0.722155   0.470736   1.534 0.125006    
+## ORIGINBWI        0.380895   0.411695   0.925 0.354869    
+## ORIGINDCA       -0.446048   0.391194  -1.140 0.254193    
+## DESTEWR         -0.003815   0.333735  -0.011 0.990880    
+## DESTJFK         -0.332552   0.269675  -1.233 0.217517    
+## CARRIERCO        1.320369   0.568219   2.324 0.020142 *  
+## CARRIERDH        1.301212   0.528114   2.464 0.013744 *  
+## CARRIERDL        0.369512   0.352554   1.048 0.294592    
 ## CARRIERMQ        1.729417   0.335504   5.155 2.54e-07 ***
-## CARRIEROH       -0.586917   0.948804  -0.619  0.53619    
-## CARRIERRU        0.762184   0.514512   1.481  0.13851    
-## CARRIERUA       -0.368591   1.178172  -0.313  0.75439    
-## Weather         17.862006 556.068283   0.032  0.97437    
+## CARRIEROH       -0.586917   0.948804  -0.619 0.536189    
+## CARRIERRU        0.762184   0.514512   1.481 0.138508    
+## CARRIERUA       -0.368591   1.178172  -0.313 0.754395    
+## Weather         17.862006 556.068283   0.032 0.974375    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
@@ -306,7 +294,17 @@ logit.reg &lt;-<span class="st"> </span><span class="kw">glm</span>(isDelay <spa
 ## AIC: 1124
 ## 
 ## Number of Fisher Scoring iterations: 15</code></pre>
-<p>Step 4: Generate outcome by comparing predicted probability with cutoff probability</p>
+<p>How do you interpret the result?</p>
+<p><span class="math display">\[
+log(Odds) = log({p \over {1-p}}) =\beta_0 + \beta_1x_1 +\beta_2x_2 + \beta_2x_2 + \dots + \beta_px_p + \epsilon
+\]</span></p>
+<ul>
+<li>For dummy variable <code>DAY_WEEKWed</code>, compared to Monday (base level), neagative coefficient -0.569128 means that it is less likely for flight on Wednesday to delay.</li>
+<li>Can you interpret other results?</li>
+</ul>
+</div>
+<div id="step-4-generate-outcome-by-comparing-predicted-probability-with-cutoff-probability" class="section level3">
+<h3>Step 4: Generate outcome by comparing predicted probability with cutoff probability</h3>
 <p>First calculate the predicted probability on validation set</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># set the cutoff to be 0.5 and evaluate the model</span>
 ## use predict() with type = &quot;response&quot; to compute predicted probabilities
@@ -396,8 +394,8 @@ train.pred &lt;-<span class="st"> </span><span class="kw">ifelse</span>(logit.re
 </div>
 </div>
 </div>
-<div id="take-home-practice-university-bank-example" class="section level2">
-<h2>Take-home practice: University bank example</h2>
+<div id="practice-example-2-acceptance-of-personal-loan-the-example-in-sesscion-12" class="section level2">
+<h2>Practice Example 2: Acceptance of Personal Loan (The example in Sesscion 12)</h2>
 <p>Universal Bank is a relatively young bank that is growing rapidly in terms of overall customer acquisition. The bank wants to explore ways of converting its liability (deposit) customers to personal loan customers.</p>
 <div id="data-description-1" class="section level3">
 <h3>Data Description</h3>
@@ -510,114 +508,19 @@ train.pred &lt;-<span class="st"> </span><span class="kw">ifelse</span>(logit.re
 <div id="questions" class="section level3">
 <h3>Questions</h3>
 <ol style="list-style-type: decimal">
-<li>Import the data from <code>UniversalBank.csv</code> and drop ID and zip code columns.</li>
+<li><p>Import the data from <code>UniversalBank.csv</code> and drop ID and zip code columns.</p></li>
+<li>Preprocess Education, which is a categorical variable
+<ul>
+<li>use <code>factor</code> factor the variable</li>
+<li>use <code>relevel</code> to set up the base level</li>
+</ul></li>
+<li><p>Partition the data into 60% training vs. 40% validation with the seed set to 2</p></li>
+<li>Run logistic regression.
+<ul>
+<li>use <code>glm</code> (general linear model) with family = “binomial” to fit a logistic regression</li>
+</ul></li>
+<li><p>Set the cutoff to be 0.5 and evaluate on validation set. (i.e. generate the confusion matrix)</p></li>
 </ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">bank.df &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;UniversalBank.csv&quot;</span>)
-bank.df &lt;-<span class="st"> </span>bank.df[ , <span class="op">-</span><span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">5</span>)]  <span class="co"># Drop ID and zip code columns.</span></code></pre></div>
-<ol start="2" style="list-style-type: decimal">
-<li>Preprocess Education, which is a categorical variable</li>
-</ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># treat Education as categorical (R will create dummy variables)</span>
-bank.df<span class="op">$</span>Education &lt;-<span class="st"> </span><span class="kw">factor</span>(bank.df<span class="op">$</span>Education, <span class="dt">levels =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>), 
-                            <span class="dt">labels =</span> <span class="kw">c</span>(<span class="st">&quot;Undergrad&quot;</span>, <span class="st">&quot;Graduate&quot;</span>, <span class="st">&quot;Advanced/Professional&quot;</span>))</code></pre></div>
-<ol start="3" style="list-style-type: decimal">
-<li>Partition the data into 60% training vs. 40% validation with the seed set to 2</li>
-</ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># partition data</span>
-<span class="kw">set.seed</span>(<span class="dv">2</span>)
-train.index &lt;-<span class="st"> </span><span class="kw">sample</span>(<span class="dv">1</span><span class="op">:</span><span class="kw">nrow</span>(bank.df), <span class="kw">nrow</span>(bank.df)<span class="op">*</span><span class="fl">0.6</span>)  
-train.df &lt;-<span class="st"> </span>bank.df[train.index, ]
-valid.df &lt;-<span class="st"> </span>bank.df[<span class="op">-</span>train.index, ]</code></pre></div>
-<ol start="4" style="list-style-type: decimal">
-<li>Run logistic regression. (use glm() (general linear model) with family = “binomial” to fit a logistic regression.</li>
-</ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># run logistic regression</span>
-logit.reg &lt;-<span class="st"> </span><span class="kw">glm</span>(Personal.Loan <span class="op">~</span><span class="st"> </span>., <span class="dt">data =</span> train.df, <span class="dt">family =</span> <span class="st">&quot;binomial&quot;</span>) 
-<span class="kw">options</span>(<span class="dt">scipen=</span><span class="dv">999</span>)
-<span class="kw">summary</span>(logit.reg)</code></pre></div>
-<pre><code>## 
-## Call:
-## glm(formula = Personal.Loan ~ ., family = &quot;binomial&quot;, data = train.df)
-## 
-## Deviance Residuals: 
-##     Min       1Q   Median       3Q      Max  
-## -2.0380  -0.1847  -0.0627  -0.0183   3.9810  
-## 
-## Coefficients:
-##                                   Estimate  Std. Error z value
-## (Intercept)                    -12.6805628   2.2903370  -5.537
-## Age                             -0.0369346   0.0848937  -0.435
-## Experience                       0.0490645   0.0844410   0.581
-## Income                           0.0612953   0.0039762  15.416
-## Family                           0.5434657   0.0994936   5.462
-## CCAvg                            0.2165942   0.0601900   3.599
-## EducationGraduate                4.2681068   0.3703378  11.525
-## EducationAdvanced/Professional   4.4408154   0.3723360  11.927
-## Mortgage                         0.0015499   0.0007926   1.955
-## Securities.Account              -1.1457476   0.3955796  -2.896
-## CD.Account                       4.5855656   0.4777696   9.598
-## Online                          -0.8588074   0.2191217  -3.919
-## CreditCard                      -1.2514213   0.2944767  -4.250
-##                                            Pr(&gt;|z|)    
-## (Intercept)                            0.0000000308 ***
-## Age                                         0.66351    
-## Experience                                  0.56121    
-## Income                         &lt; 0.0000000000000002 ***
-## Family                                 0.0000000470 ***
-## CCAvg                                       0.00032 ***
-## EducationGraduate              &lt; 0.0000000000000002 ***
-## EducationAdvanced/Professional &lt; 0.0000000000000002 ***
-## Mortgage                                    0.05052 .  
-## Securities.Account                          0.00377 ** 
-## CD.Account                     &lt; 0.0000000000000002 ***
-## Online                                 0.0000888005 ***
-## CreditCard                             0.0000214111 ***
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## (Dispersion parameter for binomial family taken to be 1)
-## 
-##     Null deviance: 1901.71  on 2999  degrees of freedom
-## Residual deviance:  682.19  on 2987  degrees of freedom
-## AIC: 708.19
-## 
-## Number of Fisher Scoring iterations: 8</code></pre>
-<ol start="5" style="list-style-type: decimal">
-<li>Set the cutoff to be 0.5 and evaluate on validation set. (i.e. generate the confusion matrix)</li>
-</ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">logit.reg.pred &lt;-<span class="st"> </span><span class="kw">predict</span>(logit.reg, valid.df, <span class="dt">type =</span> <span class="st">&quot;response&quot;</span>)
-
-<span class="co"># set cutoff value to 0.5 and evaluate classification performance</span>
-pred &lt;-<span class="st"> </span><span class="kw">ifelse</span>(logit.reg.pred <span class="op">&gt;</span><span class="st"> </span><span class="fl">0.5</span>, <span class="dv">1</span>, <span class="dv">0</span>)
-
-<span class="kw">library</span>(caret)
-<span class="kw">confusionMatrix</span>(<span class="kw">factor</span>(pred), <span class="kw">factor</span>(valid.df[,<span class="dv">8</span>]))</code></pre></div>
-<pre><code>## Confusion Matrix and Statistics
-## 
-##           Reference
-## Prediction    0    1
-##          0 1779   58
-##          1   30  133
-##                                                
-##                Accuracy : 0.956                
-##                  95% CI : (0.9461, 0.9646)     
-##     No Information Rate : 0.9045               
-##     P-Value [Acc &gt; NIR] : &lt; 0.00000000000000022
-##                                                
-##                   Kappa : 0.7274               
-##  Mcnemar's Test P-Value : 0.003999             
-##                                                
-##             Sensitivity : 0.9834               
-##             Specificity : 0.6963               
-##          Pos Pred Value : 0.9684               
-##          Neg Pred Value : 0.8160               
-##              Prevalence : 0.9045               
-##          Detection Rate : 0.8895               
-##    Detection Prevalence : 0.9185               
-##       Balanced Accuracy : 0.8399               
-##                                                
-##        'Positive' Class : 0                    
-## </code></pre>
 </div>
 </div>
 </section>
