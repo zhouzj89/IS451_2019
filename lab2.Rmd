@@ -1,5 +1,5 @@
 ---
-title: "IS 451 A Lab 2"
+title: "IS 451 B Lab 2"
 author: "TA: Zhijin Zhou "
 date: "5/8/2018"
 output: 
@@ -18,23 +18,31 @@ Logistic regression is a method for fitting a regression curve, $y = f(x)$, when
 
 ### How does Logistic Regression work?
 
+1. CalculateProbability
+2. Classify each example by comparing the predicted probability to a cutoff probability
+
+
 #### Step 1: Calculate Probability
 
 For Linear Regression, where the output is a linear combination of input feature(s), we write the equation as:
 $$
 \begin{equation}
-Y = \beta_0 + \beta_1x_1 +\beta_2x_2 + \beta_2x_2 + \dots + \beta_px_p + \epsilon
+Y = \beta_0 + \beta_1x_1 +\beta_2x_2 + \beta_2x_2 + \dots + \beta_px_p
 \end{equation}
 $$
-In Logistic Regression, we use the same equation but with some modifications made to Y. Let's reiterate a fact about Logistic Regression: we calculate `probabilities`. And, probabilities always lie between 0 and 1. In other words, we can say:
+If Y is a binary variable, we cannot use the above formula directly. Why?
+
+Instead of predicting $Y$ directly, we predict the $P(Y = 1|X)$ in logistic regression, the **probability** of $Y$ being 1 given the feature $X$.
+
+To make sure the output is **indeed** a probability, we need to make sure the outcome meets two criteria.
 
   * The Y must be positive (greater than 0).
   * It should be lower than 1.
 
-First, we'll meet the above two criteria. We know the exponential of any value is always a positive number. And, any number divided by number + 1 will always be lower than 1. Let's implement these two findings:
+We then can make the following transformations.
 
 $$
-p={1 \over {1 + {e^{\beta_0 + \beta_1x_1 +\beta_2x_2 + \beta_2x_2 + \dots + \beta_px_p + \epsilon}}}}
+p={1 \over {1 + {e^{-(\beta_0 + \beta_1x_1 +\beta_2x_2 + \beta_2x_2 + \dots + \beta_px_p)}}}}
 $$
 We can write the function in a genral form. We call it losgixtic response functin
 $$
@@ -47,24 +55,26 @@ $$
   * If $\hat p > p_{cutoff}$, then $y=1$
 
 
-## Outline:
- 1. Practice Example 1: Flight delay example
- 2. Practice Example 2: Acceptance of Personal Loan
+## Today's Outline:
+ 1. Practice 1: Flight delay example
+ 2. Practice 2: Acceptance of Personal Loan
  
 ## Practice Example 1: Flight delay example
-Predicting flight delays can be useful to a variety of organizations: airport authorities, airlines, aviation authorities. At times, joint task forces have been formed to address the problem. Such an organization, if it were to provide onging real-time assistance with flight delays, would benefit from some advance notice about flights likely to be delayed. 
+Predicting flight delays can be useful to a variety of organizations: airport authorities, airlines, aviation authorities. At times, joint task forces have been formed to address the problem. Such an organization, if it were to provide ongoing real-time assistance with flight delays, would benefit from some advance notice about flights likely to be delayed. 
 
 
 ### Data Description
 We look at six predictors. The outcome of interest is whether the flight is delayed or not. Our data consist of all flights from the Washington, DC area into the New York City area during January 2004. The percent of delayed flights among these 2201 flights is 19.5%
 
+
 ```{r showdataset, echo=FALSE,size= "10"}
 delays.df <- read.csv("FlightDelays.csv")
 knitr::kable(head(delays.df[,c("DAY_WEEK","CRS_DEP_TIME","ORIGIN","DEST","CARRIER","Weather","Flight.Status")]))
-
 ```
 
-The goal is to predict accurately whether a new flight, not in this dataset, will be delayed or not. The outcome variable is a variable called Flight Status. codded as delayed or ontime. 
+![](des.jpeg)
+
+The goal is to predict accurately whether a new flight, not in this dataset, will be delayed or not. The outcome variable is a variable called Flight Status. codded as delayed or on time. 
 
 ### Step 1: Preprocess the data
 
@@ -74,14 +84,18 @@ The goal is to predict accurately whether a new flight, not in this dataset, wil
 delays.df <- read.csv("FlightDelays.csv")
 ```
 
-#### Transform variables and create bins
-Can we use `DAY_WEEK` directly? Let's examine the class of this variable.
-
+Let’s check out what kinds of variables we have
 ```{r}
-class(delays.df$DAY_WEEK)
+str(delays.df)
 ```
 
-We cannot use it directly because the class of `DAY_WEEK` is integer. Why? (Hint: Consider how we interpret the coefficients)
+We cannot use `DAY_WEEK` directly because the class of DAY_WEEK is the **integer**.
+
+Why? (Hint: Consider how we interpret the coefficients)
+
+What about `CRS_DEP_TIME`?
+
+#### Transform Categorical Variables
 
 * `DAY_WEEK` is coded as 1 = Monday, 2 = Tuesday, ... , 7 = Sunday. We want to transform day of week into a categorical variable.
 * `CRS_DEP_TIME` is coded as a 4-digit number. (e.g. 1432 = 2:32 PM). We want to bin and categorize the departure time into hourly intervals between 6 AM and 10 PM.
@@ -92,8 +106,7 @@ delays.df$DAY_WEEK <- factor(delays.df$DAY_WEEK, levels = c(1:7),
 delays.df$CRS_DEP_TIME <- factor(round(delays.df$CRS_DEP_TIME/100))
 ```
 
-#### Transform categorical variables
-Categorical variables must be transformed into binary dummy variables. We need (n-1) dummies for a categorical variable with n levels. So we set reference categories for categorical variables. 
+We need to set **base level** for the categorial variables. For a categorical variable with $n$ levels, we can only get the coefficients for the $n −1$ levels except the base level. The coefficients for categorical variables are interpreted as how the *current level* influence the dependent variable compared to the *base level*.
 
 ```{r}
 # create reference categories
@@ -101,6 +114,12 @@ delays.df$ORIGIN <- relevel(delays.df$ORIGIN, ref = "IAD")
 delays.df$DEST <- relevel(delays.df$DEST, ref = "LGA")
 delays.df$CARRIER <- relevel(delays.df$CARRIER, ref = "US")
 delays.df$DAY_WEEK <- relevel(delays.df$DAY_WEEK, ref = "Mon")
+```
+
+Let's also recode the target variable (`Flight.Status`) to make sure that we know which status is associated with 1. 
+We can use `as.numeric` to transform a string factor into a numeric factor.
+
+```{r}
 delays.df$isDelay <- as.numeric(delays.df$Flight.Status == "delayed")
 ```
 
@@ -127,13 +146,13 @@ How do you interpret the result?
 
 
 $$
-log(Odds) = log({p \over {1-p}}) =\beta_0 + \beta_1x_1 +\beta_2x_2 + \beta_2x_2 + \dots + \beta_px_p + \epsilon
+log(Odds) = log({p \over {1-p}}) =\beta_0 + \beta_1x_1 +\beta_2x_2 + \beta_2x_2 + \dots + \beta_px_p
 $$
 
-  * For dummy variable `DAY_WEEKWed`, compared to Monday (base level), neagative coefficient -0.569128 means that it is less likely for flight on Wednesday to delay.
+  * For dummy variable `DAY_WEEKWed`, compared to Monday (base level), negative coefficient -0.569128 means that it is less likely for flight on Wednesday to delay.
   * Can you interpret other results? 
   
-### Step 4: Generate outcome by comparing predicted probability with cutoff probability
+### Step 4: Generate outcome by comparing predicted probability with the cutoff probability
 
 First calculate the predicted probability on validation set
 ```{r,message=FALSE, warning=FALSE}
@@ -147,20 +166,26 @@ logit.reg.pred <- predict(logit.reg, valid.df, type = "response")
   * If $\hat p \le 0.5$, then $y=0$
   * If $\hat p > 0.5$, then $y=1$
 
+We can use `ifelse` function to generate outcome. 
+* usage: ifelse(test, yes, no)
+* test: a logical statement
+* yes: the return value if the answer is yes
+* no: the return value if the anser is no
+
 ```{r}
 # Choose cutoff value and evaluate classification performance
 pred <- ifelse(logit.reg.pred > 0.5, 1, 0)
-
 ```
+
 
 Calculate the prediction accuracy using confusion matrix.
 ```{r, warning= FALSE, message= FALSE}
 ## generate the confusion matrix based on the prediction
 library(caret)
-confusionMatrix(factor(pred), factor(valid.df$isDelay))$table
+confusionMatrix(factor(pred), factor(valid.df$isDelay))
 confusionMatrix(factor(pred), factor(valid.df$isDelay))$overall[1]
 ```
-Question: Why do we use `factor(train.df$isDelay)` instead of `train.df$isDelay$ here?
+Question: Why do we use `factor(train.df$isDelay)` instead of `train.df\$isDelay' here?
 
 Hint: use `class` to examine the type of the data.
 
@@ -179,10 +204,9 @@ The accuracy in the training data set is
 ```{r}
 # find out training accuracy
 train.pred <- ifelse(logit.reg$fitted.values > 0.5, 1, 0)
-confusionMatrix(factor(train.pred), factor(train.df$isDelay))$table
+confusionMatrix(factor(train.pred), factor(train.df$isDelay))
 confusionMatrix(factor(train.pred), factor(train.df$isDelay))$overall[1]
 ```
-
 
 #### Change the cutoff value to 0.2
 ```{r}
@@ -200,8 +224,8 @@ confusionMatrix(factor(train.pred), factor(train.df$isDelay))$overall[1]
 
 Which one is more accurate?
 
-
-## Practice Example 2: Acceptance of Personal Loan (The example in Sesscion 12)
+## Practice Example 2: Acceptance of Personal Loan 
+This is the example in Session 12
 Universal Bank is a relatively young bank that is growing rapidly in terms of overall customer acquisition. The bank wants to explore ways of converting its liability (deposit) customers to personal loan customers.
 
 ### Data Description
@@ -224,5 +248,5 @@ knitr::kable(head(bank.df[ , -c(1, 5)]))
 4. Run logistic regression. 
     * use `glm` (general linear model) with family = "binomial" to fit a logistic regression
 
-5. Set the cutoff to be 0.5 and evaluate on validation set. (i.e. generate the confusion matrix)
+5. Set the cutoff to be 0.5 and evaluate on the validation set. (i.e. generate the confusion matrix)
 
