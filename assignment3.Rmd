@@ -1,0 +1,171 @@
+---
+title: "Assignment 3 Solution"
+author: "TA: Zhijin Zhou"
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+## Assignment 3
+
+The data file is `breastcancer.csv`. This data set is about some selected diagnosis results of breast cancer in Wisconsin. You are asked to use the 9 input variables to classify the output variable Diagnosis where (Diagnosis = malignant) is considered as the important class.
+
+### Question 1
+First assume that we do not have the target values and want to discover some patterns from the dataset. Set the number of clusters to be 3 and perform k-means clustering analysis. Set the seed to be 111.
+
+#### Solution: 
+First we need to read and normalized the data.
+```{r}
+cancer.df <- read.csv("breastcancer.csv")
+# normalize data
+library(caret)
+# compute mean and standard deviation of each column
+norm.values <- preProcess(cancer.df[,-10], method=c("center", "scale"))
+# we perform the transformation/normalization
+cancer.df.norm <- predict(norm.values, cancer.df[,-10])
+```
+
+Then we can perform k-means clustering analysis by calling function `kmeans()`. Set the seed to be 111.
+```{r}
+# set seed for reproducibility
+set.seed(111)
+km <- kmeans(cancer.df.norm, 3)
+```
+
+### Question 2
+Write down the mean value of “Bare.Nuclei” of each cluster. Compare the cluster centers (mean value of each input variable) across 3 clusters and summarize the characteristics of a cluster which make it different from the other two.
+
+#### Solution
+
+We get the centroids of each cluster by calling `km$centers`.
+```{r}
+#show the means
+km$centers[,"Bare.Nuclei"]
+```
+
+As we can see, the cluster centers for `Bare.Nuclei` are [1.0936613,-0.6201994,1.1518782]. The cluster means for the sencond cluster (-1.1518782), is significantly different from other two clusters, which are all greater than 1.
+
+### Question 3
+
+Take a look at what cluster each diagnosis belongs to, and compare that with its actual target value (column Diagnosis). Can you comment on the quality of the clustering result?
+
+#### Solution
+
+We can print out the cluster label for each observation
+```{r}
+# get the clusteres
+km$cluster
+```
+
+Then we can make a comparison between the clustering results and the true Diagnosis.
+```{r}
+#compare the clusters with true Diagnosis
+data.frame(Diagnosis = cancer.df$Diagnosis,Cluster = km$cluster)
+```
+
+As we can see from the above results, Most of the records that are diagnosed as `benign` are clustered into group 2. And for records that are diagnosed as `malignant` are clusted into group 1 or 2. 
+
+### Question 4 & 5
+
+Partition thedata into 70% Trainingand 30% Validation. Run a logistic regression model using the training data. Since Diagnosis = malignant is considered as the important class, we need to re-code Diagnosis = malignant to be class 1.
+
+#### Solution
+
+First we need to recode Diagnosis = malignant to be class 1.
+```{r}
+# recode Diagnosis 
+cancer.df$isMalignant <- as.numeric(cancer.df$Diagnosis == "malignant")
+```
+
+Then we partition the dataset. Remember, we need to exlucde the column `Disgnosis` out of our training and validation set and replace it we our newly recoded variable `isMalignant`. 
+```{r}
+# partition data
+selected_vars <- c(1,2,3,4,5,6,7,8,9,11)
+train.index <- sample(1:nrow(cancer.df), nrow(cancer.df)*0.7)
+train.df <- cancer.df[train.index, selected_vars]
+valid.df <- cancer.df[-train.index, selected_vars]
+```
+
+Run logistic regression.
+
+```{r}
+# logistic regression
+logit.reg <- glm(isMalignant ~ ., data = train.df, family = "binomial")
+```
+
+### Question 6
+
+Interpret the result. Based on the fitted coefficient values, what can you say about the effect of “Bare Nuclei”?
+
+#### Solution
+
+```{r}
+summary(logit.reg)
+```
+
+From the above results, we can see there are three features that can significantly influence the probability of being diagnosised as `malignant`:
+
+    Clump.Thickness
+    Marginal.Adhesion
+    Bare.Nuclei
+    Bland.Chromatin
+
+Since all their coefficients are postiive, then the larger the value of these features, the higher probability that a patient would be diagnoised as malignant. For `Bare.Nuclei`, specifically, the higher the patient in Bare.Nuclei, the higher the probability that patient is diagnoised as malignant.
+
+### Question 7
+
+Set the cut-off value to be 0.5.What is the accuracy for validation data?
+
+#### Solution:
+```{r}
+# prediction on validation set
+logit.reg.pred <- predict(logit.reg, valid.df, type = "response")
+pred <- ifelse(logit.reg.pred > 0.5, 1, 0)
+# calculate the accuracy on validation set
+confusionMatrix(factor(pred), factor(valid.df$isMalignant))
+```
+
+As we can see, the accuracy on the validation set is 0.9415
+
+### Question 8
+
+Since Diagnosis = malignant is more important, we want to catch more malignant cases. What is the percentage of diagnoses that are **incorrectly** classified as benign on validation data? To decrease this percentage, should the cutoff probability be increased or decreased?
+
+#### Solution:
+
+To find the percentage of disgnoses that are **incorrectly** classified as benign, we look for the number of observations that is 1 in the reference group (true value is maliganant) but 0 in the prediction group (classified as benign). We end up with getting the number of 3 (the top right corner in the confusion matrix).
+
+Then the percentage can be calculated as the by deviding 
+
+$$
+{\text{number of incorrect classifications} \over \text{total number of observations in the validation set}} = {3 \over {127+3+75}} = 0.01463415
+$$
+To decrease this probability, we want to be more tolerant in the criteria of diagnoising a patient to be malignant to make sure that the number of incorrect classifications is low. Thus, the cutoff probability should be decreased.
+
+For example, if we set the cutoff probability to be 0.2:
+```{r}
+pred <- ifelse(logit.reg.pred > 0.2, 1, 0)
+# calculate the accuracy on validation set
+confusionMatrix(factor(pred), factor(valid.df$isMalignant))
+```
+
+This probability is now deceased to
+
+$$
+ {1 \over {127+3+75}} = 0.004878049
+$$
+
+If we further lower the cutoff probability to 0.1
+```{r}
+pred <- ifelse(logit.reg.pred > 0.1, 1, 0)
+# calculate the accuracy on validation set
+confusionMatrix(factor(pred), factor(valid.df$isMalignant))
+```
+
+The probability is now 0.
+
